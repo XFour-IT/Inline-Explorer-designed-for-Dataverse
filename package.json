@@ -1,0 +1,51 @@
+{
+  "name": "dataverse-component-inspector",
+  "displayName": "Dataverse Component Inspector",
+  "description": "Inline annotations for Dataverse GUIDs inside solution XML files.",
+  "version": "0.0.1",
+  "publisher": "inlineexplorer",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://example.com/Inline-Explorer-designed-for-Dataverse.git"
+  },
+  "engines": {
+    "vscode": "^1.84.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:dataverse.login",
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "dataverse.login",
+        "title": "Dataverse: Login"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./",
+    "lint": "eslint .",
+    "prepare": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.3",
+    "@types/node-fetch": "^2.6.13",
+    "@types/vscode": "^1.84.0",
+    "@typescript-eslint/eslint-plugin": "^6.10.0",
+    "@typescript-eslint/parser": "^6.10.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@azure/msal-node": "^2.6.4",
+    "node-fetch": "^2.6.9"
+  }
+}
