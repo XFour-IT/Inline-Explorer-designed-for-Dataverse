@@ -35,8 +35,8 @@
     "lint": "eslint .",
     "prepare": "npm run compile",
     "test": "npm run test:unit",
-    "test:unit": "mocha --require ts-node/register --require tests/setup.ts \"tests/unit/**/*.spec.ts\"",
-    "test:integration": "mocha --require ts-node/register --require tests/setup.ts \"tests/integration/**/*.spec.ts\"",
+    "test:unit": "node --require ts-node/register --require ./tests/setup.ts ./node_modules/mocha/bin/_mocha --extension ts \"tests/unit/**/*.spec.ts\"",
+    "test:integration": "node --require ts-node/register --require ./tests/setup.ts ./node_modules/mocha/bin/_mocha --extension ts \"tests/integration/**/*.spec.ts\"",
     "test:coverage": "c8 -o coverage --reporter=text --reporter=lcov npm run test:unit",
     "test:ci": "npm run lint && npm run test:coverage && npm run test:integration"
   },
