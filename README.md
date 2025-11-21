@@ -29,7 +29,3 @@ A Visual Studio Code extension that annotates Dataverse solution XML files with 
 - The extension uses Microsoft Authentication Library (MSAL) with the public client ID `51f81489-12ee-4a9e-aaae-a2591f45987d`. You can override this with your own Azure AD app registration.
 - Only a subset of component types has dedicated display name resolvers. Components that are not yet supported fall back to showing the component type code and `Unknown name`.
 - Device code login prompts appear in VS Code information messages. Keep the message open until you finish signing in.
-
-## License
-
-MIT
