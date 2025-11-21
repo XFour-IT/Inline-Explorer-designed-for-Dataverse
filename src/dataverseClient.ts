@@ -1,6 +1,12 @@
 import fetch, { Response } from 'node-fetch';
 import * as vscode from 'vscode';
-import { AccountInfo, DeviceCodeRequest, PublicClientApplication } from '@azure/msal-node';
+import {
+  AccessToken,
+  ChainedTokenCredential,
+  DeviceCodeCredential,
+  VisualStudioCodeCredential,
+  TokenCredential
+} from '@azure/identity';
 
 export interface ComponentInfo {
   componentType: string;
@@ -42,10 +48,8 @@ interface LocalizedLabelSet {
 }
 
 export class DataverseClient {
-  private pca?: PublicClientApplication;
-  private account?: AccountInfo;
-  private accessToken?: string;
-  private accessTokenExpiry?: Date;
+  private credential?: TokenCredential;
+  private accessToken?: AccessToken;
   private scopes: string[] = [];
   private environmentUrl?: string;
   private readonly cache = new Map<string, ComponentInfo>();
@@ -72,82 +76,34 @@ export class DataverseClient {
     const sanitizedUrl = environmentUrl.replace(/\/?$/u, '');
     this.environmentUrl = sanitizedUrl;
 
-    const authority = `https://login.microsoftonline.com/${tenantId ?? 'common'}`;
-    const resolvedClientId = clientId ?? '51f81489-12ee-4a9e-aaae-a2591f45987d';
-
-    this.pca = new PublicClientApplication({
-      auth: {
-        authority,
-        clientId: resolvedClientId
-      },
-      cache: {
-        cachePlugin: undefined
-      }
-    });
-
     const scopes = [`${sanitizedUrl}/.default`];
-
-    const request: DeviceCodeRequest = {
-      scopes,
-      deviceCodeCallback: (response) => {
-        vscode.window.showInformationMessage(response.message, { modal: true });
-      }
-    };
-
-    const result = await this.pca.acquireTokenByDeviceCode(request);
-    if (!result) {
+    const tenant = tenantId || undefined;
+    this.credential = this.createCredential(clientId, tenant);
+    const token = await this.credential.getToken(scopes);
+    if (!token) {
       throw new Error('Failed to authenticate with Dataverse.');
     }
 
-    this.account = result.account ?? undefined;
-    this.accessToken = result.accessToken;
-    this.accessTokenExpiry = result.expiresOn ?? undefined;
+    this.accessToken = token;
     this.scopes = scopes;
     await this.context.secrets.store('dataverse.environmentUrl', sanitizedUrl);
   }
 
   public async ensureAuthenticated(): Promise<void> {
-    if (!this.pca || !this.environmentUrl) {
+    if (!this.credential || !this.environmentUrl || this.scopes.length === 0) {
       throw new Error('Dataverse login has not been initialized.');
     }
 
     const now = Date.now();
-    if (this.accessToken && this.accessTokenExpiry && this.accessTokenExpiry.getTime() - now > 60_000) {
+    if (this.accessToken && this.accessToken.expiresOnTimestamp - now > 60_000) {
       return;
     }
 
-    if (this.account) {
-      try {
-        const silentResult = await this.pca.acquireTokenSilent({
-          account: this.account,
-          scopes: this.scopes,
-          forceRefresh: false
-        });
-        if (silentResult) {
-          this.accessToken = silentResult.accessToken;
-          this.accessTokenExpiry = silentResult.expiresOn ?? undefined;
-          return;
-        }
-      } catch (error) {
-        console.warn('Silent token acquisition failed, falling back to device code flow.', error);
-      }
+    const token = await this.credential.getToken(this.scopes);
+    if (!token) {
+      throw new Error('Failed to refresh access token for Dataverse.');
     }
-
-    const scopes = this.scopes.length > 0 ? this.scopes : [`${this.environmentUrl}/.default`];
-    const request: DeviceCodeRequest = {
-      scopes,
-      deviceCodeCallback: (response) => {
-        vscode.window.showInformationMessage(response.message, { modal: true });
-      }
-    };
-    const result = await this.pca.acquireTokenByDeviceCode(request);
-    if (!result) {
-      throw new Error('Failed to re-authenticate with Dataverse.');
-    }
-    this.account = result.account ?? undefined;
-    this.accessToken = result.accessToken;
-    this.accessTokenExpiry = result.expiresOn ?? undefined;
-    this.scopes = scopes;
+    this.accessToken = token;
   }
 
   public isAuthenticated(): boolean {
@@ -225,7 +181,7 @@ export class DataverseClient {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${this.accessToken}`,
+        Authorization: `Bearer ${this.accessToken.token}`,
         Accept: 'application/json',
         'OData-MaxVersion': '4.0',
         'OData-Version': '4.0',
@@ -347,5 +303,27 @@ export class DataverseClient {
       return label.LocalizedLabels[0]?.Label;
     }
     return undefined;
+  }
+
+  private createCredential(clientId?: string, tenantId?: string): TokenCredential {
+    if (clientId) {
+      return new DeviceCodeCredential({
+        clientId,
+        tenantId,
+        userPromptCallback: (response) => {
+          void vscode.window.showInformationMessage(response.message, { modal: true });
+        }
+      });
+    }
+
+    const vsCodeCredential = new VisualStudioCodeCredential({ tenantId });
+    const deviceCodeFallback = new DeviceCodeCredential({
+      tenantId,
+      userPromptCallback: (response) => {
+        void vscode.window.showInformationMessage(response.message, { modal: true });
+      }
+    });
+
+    return new ChainedTokenCredential(vsCodeCredential, deviceCodeFallback);
   }
 }

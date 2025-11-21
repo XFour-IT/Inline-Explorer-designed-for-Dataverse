@@ -17,11 +17,17 @@ const createContext = (): vscode.ExtensionContext => ({
 describe('DataverseClient', () => {
   let client: DataverseClient;
 
+  const createAccessToken = (): { token: string; expiresOnTimestamp: number } => ({
+    token: 'token',
+    expiresOnTimestamp: Date.now() + 3_600_000
+  });
+
   beforeEach(() => {
     client = new DataverseClient(createContext());
     Object.assign(client as any, {
       environmentUrl: 'https://org.example',
-      accessToken: 'token'
+      accessToken: createAccessToken(),
+      credential: { getToken: sinon.stub().resolves(createAccessToken()) }
     });
     sinon.stub(client as any, 'ensureAuthenticated').resolves();
     sinon.stub(console, 'warn');
@@ -121,7 +127,8 @@ describe('DataverseClient', () => {
     client = new DataverseClient(createContext());
     Object.assign(client as any, {
       environmentUrl: 'https://org.example',
-      accessToken: 'token'
+      accessToken: createAccessToken(),
+      credential: { getToken: sinon.stub().resolves(createAccessToken()) }
     });
     sinon.stub(client as any, 'ensureAuthenticated').resolves();
     sinon.stub(console, 'warn');
@@ -188,7 +195,7 @@ describe('DataverseClient', () => {
     expect(client.isAuthenticated()).to.be.true;
     (client as any).accessToken = undefined;
     expect(client.isAuthenticated()).to.be.false;
-    (client as any).accessToken = 'token';
+    (client as any).accessToken = createAccessToken();
     (client as any).environmentUrl = undefined;
     expect(client.isAuthenticated()).to.be.false;
   });
