@@ -2,6 +2,8 @@
 
 A Visual Studio Code extension that annotates Dataverse solution XML files with inline component metadata. When you place the caret on a line that contains a Dataverse GUID, the extension queries your environment and renders a subtle note showing the component type and display name directly beside the GUID.
 
+[![Main branch CI](https://github.com/XFour-IT/Inline-Explorer-designed-for-Dataverse/actions/workflows/ci.yml/badge.svg)](https://github.com/XFour-IT/Inline-Explorer-designed-for-Dataverse/actions/workflows/ci.yml)
+
 ## Features
 
 - Sign in to your Dataverse environment using Azure AD device code flow.
