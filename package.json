@@ -61,6 +61,7 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
+    "@azure/identity": "^4.4.0",
     "@azure/msal-node": "^2.6.4",
     "node-fetch": "^2.6.9"
   }

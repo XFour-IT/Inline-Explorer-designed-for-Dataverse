@@ -6,7 +6,7 @@ A Visual Studio Code extension that annotates Dataverse solution XML files with 
 
 ## Features
 
-- Sign in to your Dataverse environment using Azure AD device code flow.
+- Sign in to your Dataverse environment using Azure Identity (supports the VS Code Azure Account extension) or a custom device code app registration.
 - Detect Dataverse GUIDs within XML files from unpacked solutions.
 - Display inline annotations in translucent text with the component type and display name for the GUID under the cursor.
 - Caches previously resolved GUIDs to reduce repeat network calls.
@@ -22,12 +22,26 @@ A Visual Studio Code extension that annotates Dataverse solution XML files with 
 
 2. Press `F5` in VS Code to launch an Extension Development Host.
 
-3. Run the **Dataverse: Login** command from the Command Palette and follow the device code prompts. Provide your environment URL (for example, `https://contoso.crm.dynamics.com`). You can also supply custom client and tenant IDs when needed.
+3. Run the **Dataverse: Login** command from the Command Palette and follow the prompts. Provide your environment URL (for example, `https://contoso.crm.dynamics.com`).
+   - If you are already signed in through the VS Code Azure Account extension, the extension will reuse that session via `DefaultAzureCredential`.
+   - You can also supply custom client and tenant IDs to sign in with your own Entra ID app using the device code flow.
 
 4. Open an XML file from an unpacked Dataverse solution and place the caret on a line that contains a GUID. After a brief lookup, a comment such as `// Entity - Account` appears to the right of the GUID.
 
 ## Notes
 
-- The extension uses Microsoft Authentication Library (MSAL) with the public client ID `51f81489-12ee-4a9e-aaae-a2591f45987d`. You can override this with your own Azure AD app registration.
+- Authentication is powered by `@azure/identity` and uses `DefaultAzureCredential` to light up the VS Code Azure Account extension automatically. Providing a client ID switches to a device code credential for your custom app registration.
 - Only a subset of component types has dedicated display name resolvers. Components that are not yet supported fall back to showing the component type code and `Unknown name`.
 - Device code login prompts appear in VS Code information messages. Keep the message open until you finish signing in.
+
+## Using your own Entra ID app
+
+If you prefer not to use the default VS Code session, you can register your own public client app:
+
+1. In the Azure portal, open **Microsoft Entra ID** → **App registrations** and select **New registration**.
+2. Name the app (for example, `Dataverse Component Inspector`) and choose **Accounts in any organizational directory** unless you want to scope to a single tenant.
+3. Set the platform type to **Mobile and desktop applications**, then add a redirect URI of `https://login.microsoftonline.com/common/oauth2/nativeclient`.
+4. Save the app registration and copy the **Application (client) ID** and **Directory (tenant) ID**.
+5. In VS Code, run **Dataverse: Login**, enter your Dataverse environment URL, and paste the client ID and tenant ID you captured. The extension will use these values with the device code flow.
+
+The app needs the `user_impersonation` delegated permission for your Dataverse API. Grant admin consent if your tenant requires it.
