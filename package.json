@@ -17,6 +17,7 @@
   ],
   "activationEvents": [
     "onCommand:dataverse.login",
+    "onView:dataverse.environments",
     "onStartupFinished"
   ],
   "main": "./dist/extension.js",
@@ -26,7 +27,26 @@
         "command": "dataverse.login",
         "title": "Dataverse: Login"
       }
-    ]
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "dataverse.environments",
+          "name": "Dataverse Environments"
+        }
+      ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "Dataverse Component Inspector",
+      "properties": {
+        "dataverse.allowCustomClientCredentials": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow entering custom Azure AD client ID and client secret when configuring Dataverse environments. Secrets are stored in the VS Code Secret Store."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

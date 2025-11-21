@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import {
   AccessToken,
   ChainedTokenCredential,
+  ClientSecretCredential,
   DeviceCodeCredential,
   VisualStudioCodeCredential,
   TokenCredential
@@ -47,6 +48,13 @@ interface LocalizedLabelSet {
   LocalizedLabels?: Array<{ Label?: string }>;
 }
 
+export interface EnvironmentAuthConfig {
+  environmentUrl: string;
+  clientId?: string;
+  tenantId?: string;
+  clientSecret?: string;
+}
+
 export class DataverseClient {
   private credential?: TokenCredential;
   private accessToken?: AccessToken;
@@ -72,13 +80,13 @@ export class DataverseClient {
     };
   }
 
-  public async login(environmentUrl: string, clientId?: string, tenantId?: string): Promise<void> {
-    const sanitizedUrl = environmentUrl.replace(/\/?$/u, '');
+  public async login(config: EnvironmentAuthConfig): Promise<void> {
+    const sanitizedUrl = config.environmentUrl.replace(/\/?$/u, '');
     this.environmentUrl = sanitizedUrl;
 
     const scopes = [`${sanitizedUrl}/.default`];
-    const tenant = tenantId || undefined;
-    this.credential = this.createCredential(clientId, tenant);
+    const tenant = config.tenantId || undefined;
+    this.credential = this.createCredential(config.clientId, tenant, config.clientSecret);
     const token = await this.credential.getToken(scopes);
     if (!token) {
       throw new Error('Failed to authenticate with Dataverse.');
@@ -305,7 +313,11 @@ export class DataverseClient {
     return undefined;
   }
 
-  private createCredential(clientId?: string, tenantId?: string): TokenCredential {
+  private createCredential(clientId?: string, tenantId?: string, clientSecret?: string): TokenCredential {
+    if (clientId && clientSecret) {
+      return new ClientSecretCredential(tenantId ?? 'common', clientId, clientSecret);
+    }
+
     if (clientId) {
       return new DeviceCodeCredential({
         clientId,
