@@ -1,6 +1,9 @@
 node_modules
 out
 dist
+build
 .vscode-test
 *.vsix
 
+
+coverage

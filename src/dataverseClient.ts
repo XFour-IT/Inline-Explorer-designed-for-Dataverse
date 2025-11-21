@@ -12,6 +12,35 @@ interface ComponentHandler {
   fetchDisplayName?: (guid: string) => Promise<string | undefined>;
 }
 
+interface SolutionComponentResponse {
+  value?: Array<{ componenttype: number; objectid: string }>;
+}
+
+interface EntityDefinitionResponse {
+  DisplayName?: {
+    UserLocalizedLabel?: { Label?: string };
+    LocalizedLabels?: Array<{ Label?: string }>;
+  };
+  LogicalName?: string;
+}
+
+interface NamedResponse {
+  name?: string;
+}
+
+interface DisplayNamedResponse extends NamedResponse {
+  displayname?: string;
+}
+
+interface SystemFormResponse extends NamedResponse {
+  type?: number;
+}
+
+interface LocalizedLabelSet {
+  UserLocalizedLabel?: { Label?: string };
+  LocalizedLabels?: Array<{ Label?: string }>;
+}
+
 export class DataverseClient {
   private pca?: PublicClientApplication;
   private account?: AccountInfo;
@@ -145,8 +174,8 @@ export class DataverseClient {
     const filterClause = encodeURIComponent(`objectid eq ${this.formatGuidLiteral(normalizedGuid)}`);
     const url = `${this.environmentUrl}/api/data/v9.2/solutioncomponents?$select=componenttype,objectid&$filter=${filterClause}`;
     const response = await this.apiGet(url);
-    const json: any = await response.json();
-    const component = Array.isArray(json?.value) ? json.value[0] : undefined;
+    const json = (await response.json()) as SolutionComponentResponse;
+    const component = json.value?.[0];
 
     if (!component) {
       const info: ComponentInfo = {
@@ -216,8 +245,8 @@ export class DataverseClient {
     }
     const url = `${this.environmentUrl}/api/data/v9.2/EntityDefinitions(${metadataId})?$select=DisplayName,LogicalName`;
     const response = await this.apiGet(url);
-    const json: any = await response.json();
-    return this.pickLabel(json?.DisplayName) ?? json?.LogicalName;
+    const json = (await response.json()) as EntityDefinitionResponse;
+    return this.pickLabel(json.DisplayName) ?? json.LogicalName;
   }
 
   private async getWebResourceName(guid: string): Promise<string | undefined> {
@@ -226,8 +255,8 @@ export class DataverseClient {
     }
     const url = `${this.environmentUrl}/api/data/v9.2/webresourceset(${guid})?$select=name,displayname`;
     const response = await this.apiGet(url);
-    const json: any = await response.json();
-    return json?.displayname ?? json?.name;
+    const json = (await response.json()) as DisplayNamedResponse;
+    return json.displayname ?? json.name;
   }
 
   private async getSavedQueryName(guid: string): Promise<string | undefined> {
@@ -236,8 +265,8 @@ export class DataverseClient {
     }
     const url = `${this.environmentUrl}/api/data/v9.2/savedqueries(${guid})?$select=name`;
     const response = await this.apiGet(url);
-    const json: any = await response.json();
-    return json?.name ?? undefined;
+    const json = (await response.json()) as NamedResponse;
+    return json.name ?? undefined;
   }
 
   private async getWorkflowName(guid: string): Promise<string | undefined> {
@@ -246,8 +275,8 @@ export class DataverseClient {
     }
     const url = `${this.environmentUrl}/api/data/v9.2/workflows(${guid})?$select=name`;
     const response = await this.apiGet(url);
-    const json: any = await response.json();
-    return json?.name;
+    const json = (await response.json()) as NamedResponse;
+    return json.name;
   }
 
   private async getPluginAssemblyName(guid: string): Promise<string | undefined> {
@@ -256,8 +285,8 @@ export class DataverseClient {
     }
     const url = `${this.environmentUrl}/api/data/v9.2/pluginassemblies(${guid})?$select=name`;
     const response = await this.apiGet(url);
-    const json: any = await response.json();
-    return json?.name;
+    const json = (await response.json()) as NamedResponse;
+    return json.name;
   }
 
   private async getSdkStepName(guid: string): Promise<string | undefined> {
@@ -266,8 +295,8 @@ export class DataverseClient {
     }
     const url = `${this.environmentUrl}/api/data/v9.2/sdkmessageprocessingsteps(${guid})?$select=name`;
     const response = await this.apiGet(url);
-    const json: any = await response.json();
-    return json?.name;
+    const json = (await response.json()) as NamedResponse;
+    return json.name;
   }
 
   private async getSystemFormName(guid: string): Promise<string | undefined> {
@@ -276,14 +305,14 @@ export class DataverseClient {
     }
     const url = `${this.environmentUrl}/api/data/v9.2/systemforms(${guid})?$select=name,type`;
     const response = await this.apiGet(url);
-    const json: any = await response.json();
-    if (json?.type && typeof json.type === 'number') {
+    const json = (await response.json()) as SystemFormResponse;
+    if (json.type && typeof json.type === 'number') {
       const typeName = this.resolveFormType(json.type);
       if (typeName) {
         return `${json.name ?? 'Form'} (${typeName})`;
       }
     }
-    return json?.name ?? undefined;
+    return json.name ?? undefined;
   }
 
   private async getCustomControlName(guid: string): Promise<string | undefined> {
@@ -292,8 +321,8 @@ export class DataverseClient {
     }
     const url = `${this.environmentUrl}/api/data/v9.2/customcontrols(${guid})?$select=name,displayname`;
     const response = await this.apiGet(url);
-    const json: any = await response.json();
-    return json?.displayname ?? json?.name;
+    const json = (await response.json()) as DisplayNamedResponse;
+    return json.displayname ?? json.name;
   }
 
   private resolveFormType(typeCode: number): string | undefined {
@@ -307,7 +336,7 @@ export class DataverseClient {
     return map[typeCode];
   }
 
-  private pickLabel(label: any): string | undefined {
+  private pickLabel(label: LocalizedLabelSet | undefined): string | undefined {
     if (!label) {
       return undefined;
     }
